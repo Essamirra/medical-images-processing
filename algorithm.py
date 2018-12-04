@@ -2,10 +2,29 @@
 
 
 import numpy as np
+import scipy.stats
 
 
-def extract_texture_features(image):
-    return
+def extract_histogramm_features(image):
+#    hist = np.zeros(256)
+#    unique, counts = np.unique(image, return_counts=True)
+#    hist[unique] = counts
+#    
+#    values = np.arange(256, dtype=np.uint8)
+#    density = hist / np.sum(hist)
+    
+    characteristics = []
+    intensity = image.flatten()
+    
+    characteristics.append(intensity.mean())
+    characteristics.append(intensity.std())
+    characteristics.append(scipy.stats.entropy(intensity))
+    for moment in (2, 3, 4):
+        characteristics.append(scipy.stats.moment(intensity, moment=moment))
+    for q in (0, 25, 50, 75, 100):
+        characteristics.append(np.percentile(intensity, q=q))
+    
+    return np.array(characteristics)
 
 
 def extract_haralick_features(image):
