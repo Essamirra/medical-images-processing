@@ -5,14 +5,7 @@ import numpy as np
 import scipy.stats
 
 
-def extract_histogramm_features(image):
-#    hist = np.zeros(256)
-#    unique, counts = np.unique(image, return_counts=True)
-#    hist[unique] = counts
-#    
-#    values = np.arange(256, dtype=np.uint8)
-#    density = hist / np.sum(hist)
-    
+def extract_histogramm_features(image): 
     characteristics = []
     intensity = image.flatten()
     
@@ -81,7 +74,52 @@ def extract_haralick_features(image):
     return result
 
 
-def region_growing():
-    pass
+class DisjointSetUnion:
+    
+    def __init__(self, h, w):
+        self._h = h
+        self._w = w
+        self._parents = np.arange(h * w, dtype=np.int32)
+
+    def _head(self, pixel):
+        pixel = pixel[0] * self._w + pixel[1]
+        path = []
+        while pixel != self._parents[pixel]:
+            path.append(pixel)
+            pixel = self._parents[pixel]
+        for path_pixel in path:
+            self._parents[path_pixel] = pixel
+        return pixel  
+
+    def unite(self, first, second):
+        self._parents[self._head(first)] = self._head(second)
+        
+    def get_regions(self):
+        result = {}
+        for i in range(self._h):
+            for j in range(self._w):
+                pixel = (i, j)
+                head = self._head(pixel)
+                if head not in result:
+                    result[head] = ([], [])
+                result[head][0].append(i)
+                result[head][1].append(j)
+        return result
+
+
+def region_growing(image, threshold=0.25):
+    h, w = image.shape
+    union = DisjointSetUnion(h, w)
+    image = image.astype(np.float64)
+    for i in range(h - 1):
+        for j in range(w - 1):
+            for shift in ((0, 1), (1, 1), (1, 0)):
+                if (np.abs(image[i, j] - image[i + shift[0], j + shift[1]]) < threshold):
+                    union.unite((i, j), (i + shift[0], j + shift[1]))
+                    
+    result = np.empty((h, w), dtype=np.float64)
+    for indexes in union.get_regions().values():
+        result[indexes] = np.mean(image[indexes])
+    return result
 
 
